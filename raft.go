@@ -154,7 +154,7 @@ func (r *Raft) run() {
 func (r *Raft) runFollower() {
 	didWarn := false
 	leaderAddr, leaderID := r.LeaderWithID()
-	r.logger.Info("entering follower state", "follower", r, "leader-address", leaderAddr, "leader-id", leaderID)
+	r.logger.Info("entering FOLLOWER state", "follower", r, "leader-address", leaderAddr, "leader-id", leaderID)
 	metrics.IncrCounter([]string{"raft", "state", "follower"}, 1)
 	heartbeatTimer := randomTimeout(r.config().HeartbeatTimeout)
 

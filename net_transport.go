@@ -14,6 +14,8 @@ import (
 	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-msgpack/codec"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -48,7 +50,6 @@ var (
 )
 
 /*
-
 NetworkTransport provides a network based transport that can be
 used to communicate with Raft on remote machines. It requires
 an underlying stream layer to provide a stream abstraction, which can
@@ -64,7 +65,6 @@ both are encoded using MsgPack.
 InstallSnapshot is special, in that after the RPC request we stream
 the entire state. That socket is not re-used as the connection state
 is not known if there is an error.
-
 */
 type NetworkTransport struct {
 	connPool     map[ServerAddress][]*netConn
@@ -761,6 +761,12 @@ func (n *netPipeline) decodeResponses() {
 
 // AppendEntries is used to pipeline a new append entries request.
 func (n *netPipeline) AppendEntries(args *AppendEntriesRequest, resp *AppendEntriesResponse) (AppendFuture, error) {
+	ctx := context.Background()
+	ctx, span := Tracer.Start(ctx, "append_entries",
+		trace.WithSpanKind(trace.SpanKindServer))
+	span.SetAttributes(attribute.String("peer", n.conn.conn.LocalAddr().String()))
+	defer span.End()
+
 	// Create a new future
 	future := &appendFuture{
 		start: time.Now(),
