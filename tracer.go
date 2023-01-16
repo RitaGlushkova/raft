@@ -4,4 +4,4 @@ import (
 	"go.opentelemetry.io/otel"
 )
 
-var Tracer = otel.Tracer("raft-grpc-example")
+var Tracer = otel.Tracer("raft-otel-service")
