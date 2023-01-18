@@ -14,7 +14,6 @@ import (
 	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-msgpack/codec"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -762,12 +761,6 @@ func (n *netPipeline) decodeResponses() {
 
 // AppendEntries is used to pipeline a new append entries request.
 func (n *netPipeline) AppendEntries(args *AppendEntriesRequest, resp *AppendEntriesResponse) (AppendFuture, error) {
-	ctx := context.Background()
-	ctx, span := n.tracer.Start(ctx, "append_entries",
-		trace.WithSpanKind(trace.SpanKindServer))
-	span.SetAttributes(attribute.String("peer", n.conn.conn.LocalAddr().String()), attribute.Int64("beeb", 1))
-	defer span.End()
-	fmt.Println("IT IS RUNNING")
 	// Create a new future
 	future := &appendFuture{
 		start: time.Now(),

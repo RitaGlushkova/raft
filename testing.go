@@ -761,7 +761,7 @@ func makeCluster(t *testing.T, opts *MakeClusterOpts) *cluster {
 			}
 		}
 
-		raft, err := NewRaft(peerConf, c.fsms[i], logs, store, snap, trans, nil)
+		raft, err := NewRaft(nil, peerConf, c.fsms[i], logs, store, snap, trans, nil)
 		if err != nil {
 			t.Fatalf("NewRaft failed: %v", err)
 		}

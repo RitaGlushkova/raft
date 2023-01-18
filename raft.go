@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/armon/go-metrics"
 )
@@ -165,7 +167,6 @@ func (r *Raft) runFollower() {
 		case rpc := <-r.rpcCh:
 			r.mainThreadSaturation.working()
 			r.processRPC(rpc)
-
 		case c := <-r.configurationChangeCh:
 			r.mainThreadSaturation.working()
 			// Reject any operations since we are not the leader
@@ -525,6 +526,11 @@ func (r *Raft) runLeader() {
 // it'll instruct the replication routines to try to replicate to the current
 // index. This must only be called from the main thread.
 func (r *Raft) startStopReplication() {
+	_, span := r.tracer.Start(r.ctx, "startStopReplication",
+		trace.WithSpanKind(trace.SpanKindServer))
+	span.SetAttributes(attribute.String("stop_start_repl", "all"))
+	defer span.End()
+	fmt.Println("startSTOPrepl IS RUNNING")
 	inConfig := make(map[ServerID]bool, len(r.configurations.latest.Servers))
 	lastIdx := r.getLastIndex()
 
@@ -896,6 +902,11 @@ func (r *Raft) leaderLoop() {
 // verifyLeader must be called from the main thread for safety.
 // Causes the followers to attempt an immediate heartbeat.
 func (r *Raft) verifyLeader(v *verifyFuture) {
+	_, span := r.tracer.Start(r.ctx, "verifyLeader",
+		trace.WithSpanKind(trace.SpanKindServer))
+	span.SetAttributes(attribute.String("verify_leader", string(r.localID)))
+	defer span.End()
+	fmt.Println("verifyLeader IS RUNNING")
 	// Current leader always votes for self
 	v.votes = 1
 
@@ -921,6 +932,11 @@ func (r *Raft) verifyLeader(v *verifyFuture) {
 
 // leadershipTransfer is doing the heavy lifting for the leadership transfer.
 func (r *Raft) leadershipTransfer(id ServerID, address ServerAddress, repl *followerReplication, stopCh chan struct{}, doneCh chan error) {
+	_, span := r.tracer.Start(r.ctx, "leadershipTransfer",
+		trace.WithSpanKind(trace.SpanKindServer))
+	span.SetAttributes(attribute.String("leadership_transfer", string(address)))
+	defer span.End()
+	fmt.Println("leadershipTransfer IS RUNNING")
 	// make sure we are not already stopped
 	select {
 	case <-stopCh:
@@ -1526,6 +1542,9 @@ func (r *Raft) processConfigurationLogEntry(entry *Log) error {
 
 // requestVote is invoked when we get a request vote RPC call.
 func (r *Raft) requestVote(rpc RPC, req *RequestVoteRequest) {
+	_, span := r.tracer.Start(r.ctx, "requestVote",
+		trace.WithSpanKind(trace.SpanKindServer))
+	defer span.End()
 	defer metrics.MeasureSince([]string{"raft", "rpc", "requestVote"}, time.Now())
 	r.observe(*req)
 
@@ -1915,6 +1934,7 @@ func (r *Raft) setState(state RaftState) {
 // pickServer returns the follower that is most up to date and participating in quorum.
 // Because it accesses leaderstate, it should only be called from the leaderloop.
 func (r *Raft) pickServer() *Server {
+
 	var pick *Server
 	var current uint64
 	for _, server := range r.configurations.latest.Servers {

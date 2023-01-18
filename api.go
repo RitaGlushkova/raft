@@ -1,6 +1,7 @@
 package raft
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -213,6 +214,8 @@ type Raft struct {
 	mainThreadSaturation *saturationMetric
 
 	tracer trace.Tracer
+
+	ctx context.Context
 }
 
 // BootstrapCluster initializes a server's storage with the given cluster
@@ -431,10 +434,10 @@ func RecoverCluster(conf *Config, fsm FSM, logs LogStore, stable StableStore,
 // GetConfiguration returns the persisted configuration of the Raft cluster
 // without starting a Raft instance or connecting to the cluster. This function
 // has identical behavior to Raft.GetConfiguration.
-func GetConfiguration(conf *Config, fsm FSM, logs LogStore, stable StableStore,
+func GetConfiguration(ctx context.Context, conf *Config, fsm FSM, logs LogStore, stable StableStore,
 	snaps SnapshotStore, trans Transport, tracer trace.Tracer) (Configuration, error) {
 	conf.skipStartup = true
-	r, err := NewRaft(conf, fsm, logs, stable, snaps, trans, tracer)
+	r, err := NewRaft(ctx, conf, fsm, logs, stable, snaps, trans, tracer)
 	if err != nil {
 		return Configuration{}, err
 	}
@@ -485,7 +488,7 @@ func HasExistingState(logs LogStore, stable StableStore, snaps SnapshotStore) (b
 // as implementations of various interfaces that are required. If we have any
 // old state, such as snapshots, logs, peers, etc, all those will be restored
 // when creating the Raft node.
-func NewRaft(conf *Config, fsm FSM, logs LogStore, stable StableStore, snaps SnapshotStore, trans Transport, tracer trace.Tracer) (*Raft, error) {
+func NewRaft(ctx context.Context, conf *Config, fsm FSM, logs LogStore, stable StableStore, snaps SnapshotStore, trans Transport, tracer trace.Tracer) (*Raft, error) {
 	// Validate the configuration.
 	if err := ValidateConfig(conf); err != nil {
 		return nil, err
@@ -561,6 +564,7 @@ func NewRaft(conf *Config, fsm FSM, logs LogStore, stable StableStore, snaps Sna
 		followerNotifyCh:      make(chan struct{}, 1),
 		mainThreadSaturation:  newSaturationMetric([]string{"raft", "thread", "main", "saturation"}, 1*time.Second),
 		tracer:                tracer,
+		ctx:                   ctx,
 	}
 
 	r.conf.Store(*conf)
