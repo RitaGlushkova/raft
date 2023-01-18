@@ -5,6 +5,8 @@ import (
 	"io"
 	"sync"
 	"time"
+
+	"go.opentelemetry.io/otel/trace"
 )
 
 // NewInmemAddr returns a new in-memory addr with
@@ -25,6 +27,7 @@ type inmemPipeline struct {
 	shutdown     bool
 	shutdownCh   chan struct{}
 	shutdownLock sync.RWMutex
+	tracer       trace.Tracer
 }
 
 type inmemPipelineInflight struct {
@@ -296,9 +299,10 @@ func (i *inmemPipeline) decodeResponses() {
 func (i *inmemPipeline) AppendEntries(args *AppendEntriesRequest, resp *AppendEntriesResponse) (AppendFuture, error) {
 	// Create a new future
 	future := &appendFuture{
-		start: time.Now(),
-		args:  args,
-		resp:  resp,
+		start:  time.Now(),
+		args:   args,
+		resp:   resp,
+		tracer: i.tracer,
 	}
 	future.init()
 

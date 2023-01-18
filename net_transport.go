@@ -146,7 +146,7 @@ type netPipeline struct {
 
 	doneCh       chan AppendFuture
 	inprogressCh chan *appendFuture
-
+	tracer       trace.Tracer
 	shutdown     bool
 	shutdownCh   chan struct{}
 	shutdownLock sync.Mutex
@@ -379,7 +379,7 @@ func (n *NetworkTransport) returnConn(conn *netConn) {
 
 // AppendEntriesPipeline returns an interface that can be used to pipeline
 // AppendEntries requests.
-func (n *NetworkTransport) AppendEntriesPipeline(id ServerID, target ServerAddress) (AppendPipeline, error) {
+func (n *NetworkTransport) AppendEntriesPipeline(id ServerID, target ServerAddress, tracer trace.Tracer) (AppendPipeline, error) {
 	// Get a connection
 	conn, err := n.getConnFromAddressProvider(id, target)
 	if err != nil {
@@ -387,7 +387,7 @@ func (n *NetworkTransport) AppendEntriesPipeline(id ServerID, target ServerAddre
 	}
 
 	// Create the pipeline
-	return newNetPipeline(n, conn), nil
+	return newNetPipeline(n, conn, tracer), nil
 }
 
 // AppendEntries implements the Transport interface.
@@ -723,13 +723,14 @@ func sendRPC(conn *netConn, rpcType uint8, args interface{}) error {
 
 // newNetPipeline is used to construct a netPipeline from a given
 // transport and connection.
-func newNetPipeline(trans *NetworkTransport, conn *netConn) *netPipeline {
+func newNetPipeline(trans *NetworkTransport, conn *netConn, tracer trace.Tracer) *netPipeline {
 	n := &netPipeline{
 		conn:         conn,
 		trans:        trans,
 		doneCh:       make(chan AppendFuture, rpcMaxPipeline),
 		inprogressCh: make(chan *appendFuture, rpcMaxPipeline),
 		shutdownCh:   make(chan struct{}),
+		tracer:       tracer,
 	}
 	go n.decodeResponses()
 	return n
@@ -762,11 +763,11 @@ func (n *netPipeline) decodeResponses() {
 // AppendEntries is used to pipeline a new append entries request.
 func (n *netPipeline) AppendEntries(args *AppendEntriesRequest, resp *AppendEntriesResponse) (AppendFuture, error) {
 	ctx := context.Background()
-	ctx, span := Tracer.Start(ctx, "append_entries",
+	ctx, span := n.tracer.Start(ctx, "append_entries",
 		trace.WithSpanKind(trace.SpanKindServer))
-	span.SetAttributes(attribute.String("peer", n.conn.conn.LocalAddr().String()))
+	span.SetAttributes(attribute.String("peer", n.conn.conn.LocalAddr().String()), attribute.Int64("beeb", 1))
 	defer span.End()
-
+	fmt.Println("IT IS RUNNING")
 	// Create a new future
 	future := &appendFuture{
 		start: time.Now(),

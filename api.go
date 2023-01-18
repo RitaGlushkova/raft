@@ -11,6 +11,7 @@ import (
 
 	metrics "github.com/armon/go-metrics"
 	hclog "github.com/hashicorp/go-hclog"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -210,6 +211,8 @@ type Raft struct {
 
 	// mainThreadSaturation measures the saturation of the main raft goroutine.
 	mainThreadSaturation *saturationMetric
+
+	tracer trace.Tracer
 }
 
 // BootstrapCluster initializes a server's storage with the given cluster
@@ -429,9 +432,9 @@ func RecoverCluster(conf *Config, fsm FSM, logs LogStore, stable StableStore,
 // without starting a Raft instance or connecting to the cluster. This function
 // has identical behavior to Raft.GetConfiguration.
 func GetConfiguration(conf *Config, fsm FSM, logs LogStore, stable StableStore,
-	snaps SnapshotStore, trans Transport) (Configuration, error) {
+	snaps SnapshotStore, trans Transport, tracer trace.Tracer) (Configuration, error) {
 	conf.skipStartup = true
-	r, err := NewRaft(conf, fsm, logs, stable, snaps, trans)
+	r, err := NewRaft(conf, fsm, logs, stable, snaps, trans, tracer)
 	if err != nil {
 		return Configuration{}, err
 	}
@@ -482,7 +485,7 @@ func HasExistingState(logs LogStore, stable StableStore, snaps SnapshotStore) (b
 // as implementations of various interfaces that are required. If we have any
 // old state, such as snapshots, logs, peers, etc, all those will be restored
 // when creating the Raft node.
-func NewRaft(conf *Config, fsm FSM, logs LogStore, stable StableStore, snaps SnapshotStore, trans Transport) (*Raft, error) {
+func NewRaft(conf *Config, fsm FSM, logs LogStore, stable StableStore, snaps SnapshotStore, trans Transport, tracer trace.Tracer) (*Raft, error) {
 	// Validate the configuration.
 	if err := ValidateConfig(conf); err != nil {
 		return nil, err
@@ -557,6 +560,7 @@ func NewRaft(conf *Config, fsm FSM, logs LogStore, stable StableStore, snaps Sna
 		leaderNotifyCh:        make(chan struct{}, 1),
 		followerNotifyCh:      make(chan struct{}, 1),
 		mainThreadSaturation:  newSaturationMetric([]string{"raft", "thread", "main", "saturation"}, 1*time.Second),
+		tracer:                tracer,
 	}
 
 	r.conf.Store(*conf)

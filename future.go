@@ -5,6 +5,8 @@ import (
 	"io"
 	"sync"
 	"time"
+
+	"go.opentelemetry.io/otel/trace"
 )
 
 // Future is used to represent an action that may occur in the future.
@@ -293,9 +295,10 @@ func (v *verifyFuture) vote(leader bool) {
 // entries RPC.
 type appendFuture struct {
 	deferError
-	start time.Time
-	args  *AppendEntriesRequest
-	resp  *AppendEntriesResponse
+	start  time.Time
+	args   *AppendEntriesRequest
+	resp   *AppendEntriesResponse
+	tracer trace.Tracer
 }
 
 func (a *appendFuture) Start() time.Time {
