@@ -316,7 +316,7 @@ func TestNetworkTransport_AppendEntriesPipeline(t *testing.T) {
 			t.Fatalf("err: %v", err)
 		}
 		defer trans2.Close()
-		pipeline, err := trans2.AppendEntriesPipeline("id1", trans1.LocalAddr())
+		pipeline, err := trans2.AppendEntriesPipeline("id1", trans1.LocalAddr(), nil)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
