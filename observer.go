@@ -116,6 +116,11 @@ func (r *Raft) DeregisterObserver(or *Observer) {
 
 // observe sends an observation to every observer.
 func (r *Raft) observe(o interface{}) {
+	// _, span := r.tracer.Start(r.ctx, "observe",
+	// 	trace.WithSpanKind(trace.SpanKindServer))
+	// span.SetAttributes(attribute.String("status", "observe"))
+	// defer span.End()
+	// fmt.Println("observe")
 	// In general observers should not block. But in any case this isn't
 	// disastrous as we only hold a read lock, which merely prevents
 	// registration / deregistration of observers.

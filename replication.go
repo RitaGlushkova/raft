@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -197,6 +199,11 @@ PIPELINE:
 // given last index.
 // If the follower log is behind, we take care to bring them up to date.
 func (r *Raft) replicateTo(s *followerReplication, lastIndex uint64) (shouldStop bool) {
+	_, span := r.tracer.Start(r.ctx, "replicateTo",
+		trace.WithSpanKind(trace.SpanKindServer))
+	span.SetAttributes(attribute.String("status", "replicateTo"))
+	defer span.End()
+	fmt.Println("replicateTo Is called")
 	// Create the base request
 	var req AppendEntriesRequest
 	var resp AppendEntriesResponse
@@ -432,6 +439,11 @@ func (r *Raft) heartbeat(s *followerReplication, stopCh chan struct{}) {
 // We only pipeline AppendEntries commands, and if we ever hit an error, we fall
 // back to the standard replication which can handle more complex situations.
 func (r *Raft) pipelineReplicate(s *followerReplication) error {
+	_, span := r.tracer.Start(r.ctx, "pipelineReplicate",
+		trace.WithSpanKind(trace.SpanKindServer))
+	span.SetAttributes(attribute.String("status", "pipelineReplicate"))
+	defer span.End()
+	fmt.Println("pipelineReplicate IS called")
 	s.peerLock.RLock()
 	peer := s.peer
 	s.peerLock.RUnlock()
@@ -573,6 +585,11 @@ func (r *Raft) setupAppendEntries(s *followerReplication, req *AppendEntriesRequ
 // setPreviousLog is used to setup the PrevLogEntry and PrevLogTerm for an
 // AppendEntriesRequest given the next index to replicate.
 func (r *Raft) setPreviousLog(req *AppendEntriesRequest, nextIndex uint64) error {
+	// _, span := r.tracer.Start(r.ctx, "setPreviousLog",
+	// 	trace.WithSpanKind(trace.SpanKindServer))
+	// span.SetAttributes(attribute.String("status", "setPreviousLog"))
+	// defer span.End()
+	// fmt.Println("setPreviousLog")
 	// Guard for the first index, since there is no 0 log entry
 	// Guard against the previous index being a snapshot as well
 	lastSnapIdx, lastSnapTerm := r.getLastSnapshot()
@@ -629,6 +646,11 @@ func appendStats(peer string, start time.Time, logs float32) {
 
 // handleStaleTerm is used when a follower indicates that we have a stale term.
 func (r *Raft) handleStaleTerm(s *followerReplication) {
+	_, span := r.tracer.Start(r.ctx, "handleStaleTerm",
+		trace.WithSpanKind(trace.SpanKindServer))
+	span.SetAttributes(attribute.String("status", "handleStaleTerm"))
+	defer span.End()
+	fmt.Println("handleStaleTerm")
 	r.logger.Error("peer has newer term, stopping replication", "peer", s.peer)
 	s.notifyAll(false) // No longer leader
 	asyncNotifyCh(s.stepDown)

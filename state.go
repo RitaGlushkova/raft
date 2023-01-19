@@ -92,6 +92,11 @@ func (r *raftState) setCurrentTerm(term uint64) {
 }
 
 func (r *raftState) getLastLog() (index, term uint64) {
+	// ctx := context.Background()
+	// _, span := r.tracer.Start(ctx, "getLastLog",
+	// 	trace.WithSpanKind(trace.SpanKindServer))
+	// span.SetAttributes(attribute.String("status", "getLastLog"))
+	//defer span.End()
 	r.lastLock.Lock()
 	index = r.lastLogIndex
 	term = r.lastLogTerm

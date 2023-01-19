@@ -528,7 +528,7 @@ func (r *Raft) runLeader() {
 func (r *Raft) startStopReplication() {
 	_, span := r.tracer.Start(r.ctx, "startStopReplication",
 		trace.WithSpanKind(trace.SpanKindServer))
-	span.SetAttributes(attribute.String("stop_start_repl", "all"))
+	span.SetAttributes(attribute.String("status", "startStopReplication"))
 	defer span.End()
 	fmt.Println("startSTOPrepl IS RUNNING")
 	inConfig := make(map[ServerID]bool, len(r.configurations.latest.Servers))
@@ -1923,6 +1923,7 @@ func (r *Raft) setCurrentTerm(t uint64) {
 // transition causes the known leader to be cleared. This means
 // that leader should be set only after updating the state.
 func (r *Raft) setState(state RaftState) {
+
 	r.setLeader("", "")
 	oldState := r.raftState.getState()
 	r.raftState.setState(state)
@@ -1934,7 +1935,11 @@ func (r *Raft) setState(state RaftState) {
 // pickServer returns the follower that is most up to date and participating in quorum.
 // Because it accesses leaderstate, it should only be called from the leaderloop.
 func (r *Raft) pickServer() *Server {
-
+	_, span := r.tracer.Start(r.ctx, "pickServer",
+		trace.WithSpanKind(trace.SpanKindServer))
+	span.SetAttributes(attribute.String("status", "pickServer"))
+	defer span.End()
+	fmt.Println("pickServer Running")
 	var pick *Server
 	var current uint64
 	for _, server := range r.configurations.latest.Servers {
@@ -1959,6 +1964,11 @@ func (r *Raft) pickServer() *Server {
 // sending a message to the leadershipTransferCh, to make sure it runs in the
 // mainloop.
 func (r *Raft) initiateLeadershipTransfer(id *ServerID, address *ServerAddress) LeadershipTransferFuture {
+	_, span := r.tracer.Start(r.ctx, "initiateLeadershipTransfer",
+		trace.WithSpanKind(trace.SpanKindServer))
+	span.SetAttributes(attribute.String("status", "initiateLeadershipTransfer"))
+	defer span.End()
+	fmt.Println("initiateLeadershipTransfer Running")
 	future := &leadershipTransferFuture{ID: id, Address: address}
 	future.init()
 
